@@ -1,0 +1,704 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="color-scheme" content="light dark" />
+  <title>Markdown Studio</title>
+  <style>
+    :root {
+      --bg: #f4f6fb;
+      --surface: #ffffff;
+      --surface-2: #f8f9fc;
+      --surface-3: #eef1f7;
+      --text: #202437;
+      --muted: #737b91;
+      --border: #e4e8f0;
+      --accent: #6558e8;
+      --accent-2: #8d61ec;
+      --accent-soft: #eeebff;
+      --success: #15966a;
+      --shadow: 0 18px 55px rgba(31, 38, 76, .10);
+      --editor-bg: #fff;
+      --code-bg: #f1f3f8;
+      --radius: 16px;
+    }
+    [data-theme="dark"] {
+      --bg: #11131a;
+      --surface: #1a1d27;
+      --surface-2: #202431;
+      --surface-3: #292e3e;
+      --text: #edf0fa;
+      --muted: #a0a8bf;
+      --border: #303649;
+      --accent: #a59aff;
+      --accent-2: #c19aff;
+      --accent-soft: #302b51;
+      --success: #61d8a9;
+      --shadow: 0 18px 55px rgba(0, 0, 0, .26);
+      --editor-bg: #171a23;
+      --code-bg: #252a38;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: var(--bg);
+      color: var(--text);
+      font: 14px/1.45 Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      transition: background .2s ease, color .2s ease;
+    }
+    button, input, textarea, select { font: inherit; }
+    button { color: inherit; }
+    .app { min-height: 100vh; display: flex; flex-direction: column; }
+    .topbar {
+      height: 74px; display: flex; align-items: center; gap: 20px;
+      padding: 0 26px; background: var(--surface); border-bottom: 1px solid var(--border);
+    }
+    .brand { display: flex; align-items: center; gap: 11px; min-width: 230px; }
+    .brand-mark {
+      width: 39px; height: 39px; display: grid; place-items: center; border-radius: 12px;
+      background: linear-gradient(135deg, #6558e8, #a46af0); color: white;
+      box-shadow: 0 7px 18px rgba(101,88,232,.25);
+    }
+    .brand-mark svg { width: 23px; height: 23px; }
+    .brand-name { font-size: 15px; font-weight: 750; letter-spacing: -.35px; }
+    .brand-sub { color: var(--muted); font-size: 11px; margin-top: 1px; }
+    .doc-info { flex: 1; display: flex; align-items: center; min-width: 100px; gap: 12px; }
+    .doc-title {
+      width: min(360px, 100%); border: 1px solid transparent; border-radius: 8px; padding: 8px 10px;
+      background: transparent; color: var(--text); font-size: 15px; font-weight: 650; outline: none;
+    }
+    .doc-title:hover, .doc-title:focus { border-color: var(--border); background: var(--surface-2); }
+    .save-state { color: var(--muted); white-space: nowrap; font-size: 12px; display: flex; align-items: center; gap: 7px; }
+    .save-dot { width: 7px; height: 7px; background: var(--success); border-radius: 50%; }
+    .top-actions { display: flex; align-items: center; gap: 9px; }
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+      padding: 10px 14px; border-radius: 10px; border: 1px solid var(--border);
+      background: var(--surface); color: var(--text); cursor: pointer; font-weight: 620; white-space: nowrap;
+      transition: transform .14s ease, background .14s ease, border-color .14s ease;
+    }
+    .btn:hover { background: var(--surface-2); border-color: #c7cce0; }
+    .btn:active { transform: translateY(1px); }
+    .btn svg, .tool-btn svg { width: 17px; height: 17px; flex: none; }
+    .btn-primary { color: white; border-color: transparent; background: linear-gradient(135deg, var(--accent), var(--accent-2)); box-shadow: 0 6px 15px rgba(101,88,232,.20); }
+    .btn-primary:hover { color: white; filter: brightness(1.04); border-color: transparent; }
+    .btn-icon { width: 40px; padding: 0; height: 40px; }
+    .toolbar-wrap { padding: 12px 26px 0; }
+    .toolbar {
+      min-height: 52px; padding: 8px 10px; display: flex; align-items: center; gap: 5px; flex-wrap: wrap;
+      background: var(--surface); border: 1px solid var(--border); border-radius: 13px 13px 0 0;
+    }
+    .tool-btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 33px; min-width: 34px;
+      padding: 0 9px; border: 1px solid transparent; border-radius: 7px; background: transparent;
+      color: var(--text); cursor: pointer; font-weight: 600;
+    }
+    .tool-btn:hover, .tool-btn.active { background: var(--surface-3); border-color: var(--border); }
+    .tool-btn .tool-label { font-size: 12px; }
+    .tool-divider { width: 1px; height: 24px; margin: 0 6px; background: var(--border); }
+    .heading-select {
+      height: 33px; padding: 0 8px; border: 1px solid transparent; border-radius: 7px;
+      background: transparent; color: var(--text); cursor: pointer; outline: none; font-weight: 600;
+    }
+    .heading-select:hover { background: var(--surface-3); border-color: var(--border); }
+    .workspace-shell { padding: 0 26px 18px; flex: 1; min-height: 430px; display: flex; flex-direction: column; }
+    .workspace-top {
+      min-height: 47px; display: flex; align-items: center; justify-content: space-between; gap: 16px;
+      border: 1px solid var(--border); border-top: 0; background: var(--surface); padding: 7px 12px;
+    }
+    .view-tabs { display: flex; align-items: center; gap: 4px; background: var(--surface-3); border-radius: 9px; padding: 3px; }
+    .view-tab { border: 0; background: transparent; color: var(--muted); padding: 6px 11px; border-radius: 7px; cursor: pointer; font-size: 12px; font-weight: 650; }
+    .view-tab.selected { color: var(--text); background: var(--surface); box-shadow: 0 1px 3px rgba(0,0,0,.07); }
+    .workspace-hint { color: var(--muted); font-size: 12px; }
+    .workspace {
+      min-height: 350px; flex: 1; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      background: var(--surface); border: 1px solid var(--border); border-top: 0; overflow: hidden;
+      border-radius: 0 0 13px 13px;
+    }
+    .pane { min-width: 0; min-height: 0; display: flex; flex-direction: column; }
+    .pane + .pane { border-left: 1px solid var(--border); }
+    .pane-head { display: flex; align-items: center; justify-content: space-between; padding: 12px 17px; border-bottom: 1px solid var(--border); background: var(--surface); }
+    .pane-title { display: flex; gap: 9px; align-items: center; font-size: 12px; text-transform: uppercase; letter-spacing: .8px; font-weight: 750; }
+    .pane-title svg { width: 16px; height: 16px; color: var(--accent); }
+    .pane-meta { font-size: 11px; color: var(--muted); }
+    .editor-area { min-height: 0; flex: 1; display: flex; overflow: hidden; background: var(--editor-bg); }
+    .line-numbers {
+      user-select: none; min-width: 51px; padding: 20px 13px 24px 0; text-align: right; color: #a0a7bb;
+      background: var(--surface-2); border-right: 1px solid var(--border); font: 13px/1.85 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      white-space: pre; overflow: hidden;
+    }
+    #markdownInput {
+      flex: 1; width: 100%; min-width: 0; min-height: 320px; padding: 20px 22px 30px;
+      resize: none; border: 0; outline: 0; background: transparent; color: var(--text);
+      font: 13px/1.85 ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
+      tab-size: 2; white-space: pre; overflow: auto; caret-color: var(--accent);
+    }
+    #markdownInput::placeholder { color: var(--muted); opacity: .8; }
+    .preview-scroll { flex: 1; min-height: 0; overflow: auto; background: var(--surface); }
+    .preview {
+      max-width: 850px; margin: 0 auto; padding: 28px 34px 46px; color: var(--text);
+      font-size: 14px; line-height: 1.75; overflow-wrap: anywhere;
+    }
+    .preview > :first-child { margin-top: 0; }
+    .preview h1, .preview h2, .preview h3, .preview h4 { line-height: 1.3; letter-spacing: -.55px; margin: 1.5em 0 .6em; }
+    .preview h1 { font-size: 2em; padding-bottom: .35em; border-bottom: 1px solid var(--border); }
+    .preview h2 { font-size: 1.55em; padding-bottom: .3em; border-bottom: 1px solid var(--border); }
+    .preview h3 { font-size: 1.25em; }
+    .preview p { margin: .8em 0; }
+    .preview a { color: var(--accent); text-decoration: underline; text-underline-offset: 3px; }
+    .preview blockquote { border-left: 3px solid var(--accent); margin: 1.1em 0; padding: 2px 0 2px 16px; color: var(--muted); }
+    .preview pre { padding: 15px 17px; border: 1px solid var(--border); border-radius: 10px; overflow: auto; background: var(--code-bg); line-height: 1.6; }
+    .preview code { background: var(--code-bg); padding: .15em .35em; border-radius: 5px; font: .9em ui-monospace, SFMono-Regular, Menlo, monospace; }
+    .preview pre code { padding: 0; background: transparent; }
+    .preview ul, .preview ol { padding-left: 1.6em; }
+    .preview li { padding-left: .15em; margin: .2em 0; }
+    .preview hr { border: 0; border-top: 1px solid var(--border); margin: 1.7em 0; }
+    .preview table { width: 100%; border-collapse: collapse; margin: 1.2em 0; display: block; overflow-x: auto; }
+    .preview th, .preview td { border: 1px solid var(--border); padding: 8px 11px; text-align: left; }
+    .preview th { background: var(--surface-2); font-weight: 700; }
+    .preview img { max-width: 100%; border-radius: 8px; }
+    .preview input[type="checkbox"] { accent-color: var(--accent); margin-right: 7px; }
+    .preview .empty-preview { color: var(--muted); text-align: center; padding: 70px 18px; }
+    .statusbar {
+      min-height: 42px; display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 0 4px;
+      color: var(--muted); font-size: 11px;
+    }
+    .stats, .status-right { display: flex; align-items: center; gap: 17px; }
+    .status-item { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+    .status-item svg { width: 13px; height: 13px; }
+    .shortcut { padding: 2px 5px; border: 1px solid var(--border); border-radius: 4px; background: var(--surface); font: 10px ui-monospace, monospace; }
+    .hidden { display: none !important; }
+    .workspace.mode-edit { grid-template-columns: minmax(0, 1fr); }
+    .workspace.mode-preview { grid-template-columns: minmax(0, 1fr); }
+    .workspace.mode-edit #previewPane, .workspace.mode-preview #editorPane { display: none; }
+    .workspace.mode-edit #editorPane, .workspace.mode-preview #previewPane { border-left: 0; }
+    .workspace.mode-edit #markdownInput { min-height: 440px; }
+    .workspace.mode-preview .preview { max-width: 900px; }
+    .modal-backdrop {
+      position: fixed; inset: 0; z-index: 100; display: flex; align-items: center; justify-content: center;
+      padding: 20px; background: rgba(20, 23, 39, .48); backdrop-filter: blur(6px);
+      animation: fade-in .16s ease-out;
+    }
+    .modal { width: min(470px, 100%); background: var(--surface); border: 1px solid var(--border); border-radius: 18px; box-shadow: var(--shadow); overflow: hidden; animation: rise-in .18s ease-out; }
+    .modal-head { display: flex; justify-content: space-between; align-items: flex-start; padding: 23px 24px 13px; }
+    .modal-title { font-size: 19px; font-weight: 760; letter-spacing: -.5px; }
+    .modal-subtitle { color: var(--muted); margin-top: 5px; font-size: 12px; }
+    .modal-body { padding: 10px 24px 22px; }
+    .field-label { display: block; margin: 12px 0 7px; font-weight: 680; font-size: 12px; }
+    .filename-input { width: 100%; padding: 11px 12px; background: var(--surface-2); color: var(--text); border: 1px solid var(--border); border-radius: 9px; outline: none; }
+    .filename-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 15%, transparent); }
+    .format-options { display: grid; gap: 9px; margin-top: 8px; }
+    .format-option { display: flex; gap: 12px; align-items: center; padding: 13px 14px; cursor: pointer; border: 1px solid var(--border); border-radius: 11px; background: var(--surface); }
+    .format-option:has(input:checked) { border-color: var(--accent); background: var(--accent-soft); }
+    .format-option input { accent-color: var(--accent); width: 16px; height: 16px; }
+    .format-icon { width: 39px; height: 39px; display: grid; place-items: center; border-radius: 9px; background: var(--surface-3); color: var(--accent); font: 750 11px ui-monospace, monospace; }
+    .format-copy { flex: 1; }
+    .format-name { font-weight: 740; }
+    .format-description { color: var(--muted); font-size: 11px; margin-top: 3px; }
+    .modal-foot { display: flex; justify-content: flex-end; gap: 8px; padding: 15px 24px 20px; border-top: 1px solid var(--border); background: var(--surface-2); }
+    .close-modal { border: 0; background: transparent; color: var(--muted); cursor: pointer; border-radius: 8px; width: 32px; height: 32px; display: grid; place-items: center; }
+    .close-modal:hover { background: var(--surface-3); color: var(--text); }
+    .toast {
+      position: fixed; z-index: 150; bottom: 26px; left: 50%; transform: translate(-50%, 16px); opacity: 0; pointer-events: none;
+      background: #222538; color: #fff; border: 1px solid rgba(255,255,255,.12); padding: 11px 16px; border-radius: 10px;
+      box-shadow: 0 10px 30px rgba(0,0,0,.22); font-size: 12px; transition: opacity .2s, transform .2s;
+    }
+    .toast.show { opacity: 1; transform: translate(-50%, 0); }
+    @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+    @keyframes rise-in { from { opacity: 0; transform: translateY(8px) scale(.99); } to { opacity: 1; transform: none; } }
+    @media (max-width: 1000px) {
+      .topbar { padding: 0 16px; gap: 12px; }
+      .brand { min-width: auto; }
+      .brand-sub, .save-state { display: none; }
+      .toolbar-wrap { padding: 10px 16px 0; }
+      .workspace-shell { padding: 0 16px 12px; }
+      .workspace { grid-template-columns: minmax(0,1fr); }
+      .workspace:not(.mode-edit):not(.mode-preview) #previewPane { display: none; }
+      .workspace:not(.mode-edit):not(.mode-preview) #editorPane { border-left: 0; }
+      .workspace:not(.mode-edit):not(.mode-preview) { grid-template-columns: minmax(0,1fr); }
+      .workspace:not(.mode-edit):not(.mode-preview).mobile-preview #editorPane { display: none; }
+      .workspace:not(.mode-edit):not(.mode-preview).mobile-preview #previewPane { display: flex; }
+      .statusbar { padding: 0 2px; }
+      .shortcut-hints { display: none; }
+    }
+    @media (max-width: 650px) {
+      .topbar { height: auto; min-height: 68px; flex-wrap: wrap; padding: 12px; gap: 8px; }
+      .brand { flex: 1; }
+      .brand-name { font-size: 14px; }
+      .brand-mark { width: 34px; height: 34px; }
+      .doc-info { order: 3; flex-basis: 100%; }
+      .doc-title { padding: 6px 8px; }
+      .top-actions { gap: 6px; }
+      .top-actions .btn { padding: 9px 10px; }
+      .top-actions .btn .desktop-label { display: none; }
+      .top-actions .btn-icon { width: 36px; height: 36px; }
+      .toolbar-wrap { padding: 8px 9px 0; }
+      .toolbar { padding: 7px; gap: 2px; }
+      .tool-divider { margin: 0 2px; }
+      .tool-btn { min-width: 31px; padding: 0 6px; }
+      .workspace-shell { padding: 0 9px 8px; }
+      .workspace-top { padding: 7px; }
+      .workspace-hint { display: none; }
+      .view-tab { padding: 6px 8px; }
+      .line-numbers { min-width: 38px; padding-right: 8px; }
+      #markdownInput { padding: 17px 12px; font-size: 12px; }
+      .preview { padding: 22px 17px 36px; }
+      .pane-head { padding: 10px 12px; }
+      .stats { gap: 9px; }
+      .status-right { display: none; }
+    }
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; } }
+  </style>
+</head>
+<body>
+<div class="app" id="app" data-theme="light">
+  <header class="topbar">
+    <div class="brand" aria-label="Markdown Studio">
+      <div class="brand-mark" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M4 17V7h3l3 4 3-4h3v10h-3v-5l-3 4-3-4v5z"/><path d="M18 13l2 2 2-2"/><path d="M20 15V8"/></svg>
+      </div>
+      <div><div class="brand-name">Markdown Studio</div><div class="brand-sub">Schreiben. Formatieren. Veröffentlichen.</div></div>
+    </div>
+    <div class="doc-info">
+      <input class="doc-title" id="docTitle" value="Mein Markdown-Dokument" aria-label="Dokumenttitel" maxlength="120" />
+      <span class="save-state" id="saveState"><span class="save-dot"></span><span id="saveText">Lokal gespeichert</span></span>
+    </div>
+    <div class="top-actions">
+      <button class="btn" id="importBtn" title="Markdown- oder Textdatei importieren">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 15V3m-4 4 4-4 4 4"/><path d="M5 13v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6"/></svg><span class="desktop-label">Importieren</span>
+      </button>
+      <button class="btn btn-primary" id="openDownload">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m-5-5 5 5 5-5"/><path d="M5 17v3h14v-3"/></svg><span class="desktop-label">Herunterladen</span>
+      </button>
+      <button class="btn btn-icon" id="themeToggle" aria-label="Darstellung wechseln" title="Hell-/Dunkelmodus">
+        <svg id="themeIcon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42M2 12h2m16 0h2M4.93 19.07l1.42-1.42m11.3-11.3 1.42-1.42"/></svg>
+      </button>
+    </div>
+    <input id="fileInput" type="file" accept=".md,.markdown,.txt,text/plain,text/markdown" class="hidden" />
+  </header>
+
+  <div class="toolbar-wrap">
+    <nav class="toolbar" aria-label="Markdown-Formatierung">
+      <select class="heading-select" id="headingSelect" aria-label="Überschrift einfügen" title="Überschrift"><option value="">Überschrift</option><option value="# ">H1 – Titel</option><option value="## ">H2 – Abschnitt</option><option value="### ">H3 – Unterabschnitt</option><option value="#### ">H4</option></select>
+      <span class="tool-divider"></span>
+      <button class="tool-btn" data-action="bold" title="Fett (Strg+B)" aria-label="Fett"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 4h7a4 4 0 0 1 0 8H6zM6 12h8a4 4 0 0 1 0 8H6z"/></svg></button>
+      <button class="tool-btn" data-action="italic" title="Kursiv (Strg+I)" aria-label="Kursiv"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M19 4h-9M14 20H5M15 4 9 20"/></svg></button>
+      <button class="tool-btn" data-action="strike" title="Durchgestrichen" aria-label="Durchgestrichen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M5 6a6 6 0 0 1 10-1M19 18a6 6 0 0 1-10 1M3 12h18"/></svg></button>
+      <span class="tool-divider"></span>
+      <button class="tool-btn" data-action="link" title="Link einfügen (Strg+K)" aria-label="Link einfügen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.07 0l3-3A5 5 0 0 0 13 2.93l-1.72 1.72"/><path d="M14 11a5 5 0 0 0-7.07 0l-3 3A5 5 0 0 0 11 21.07l1.72-1.72"/></svg></button>
+      <button class="tool-btn" data-action="image" title="Bild einfügen" aria-label="Bild einfügen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="3"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg></button>
+      <button class="tool-btn" data-action="quote" title="Zitat" aria-label="Zitat"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10 11H5a2 2 0 0 0-2 2v5h7v-7a6 6 0 0 1 6-6M21 11h-5a2 2 0 0 0-2 2v5h7v-7a6 6 0 0 1 6-6" transform="translate(-1 0) scale(.95 1)"/></svg></button>
+      <button class="tool-btn" data-action="inlineCode" title="Inline-Code" aria-label="Inline-Code"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m8 8-4 4 4 4m8-8 4 4-4 4m-3-11-2 14"/></svg></button>
+      <button class="tool-btn" data-action="codeBlock" title="Codeblock" aria-label="Codeblock"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="m9 9-3 3 3 3m6-6 3 3-3 3"/></svg></button>
+      <span class="tool-divider"></span>
+      <button class="tool-btn" data-action="ul" title="Aufzählung" aria-label="Aufzählung"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M9 6h11M9 12h11M9 18h11"/><path d="M4 6h.01M4 12h.01M4 18h.01" stroke-width="3"/></svg></button>
+      <button class="tool-btn" data-action="ol" title="Nummerierte Liste" aria-label="Nummerierte Liste"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M9 6h11M9 12h11M9 18h11"/><path d="M3 5h2v3M3 11h2l-2 2h2M3 17h2v2H3"/></svg></button>
+      <button class="tool-btn" data-action="task" title="Aufgabenliste" aria-label="Aufgabenliste"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="6" height="6" rx="1"/><path d="m4.5 7 1.3 1.3L8 5.8M12 7h9M3 16h6v5H3zM12 18h9"/></svg></button>
+      <button class="tool-btn" data-action="hr" title="Trennlinie" aria-label="Trennlinie"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><path d="M4 12h16"/></svg></button>
+      <button class="tool-btn" data-action="table" title="Tabelle einfügen" aria-label="Tabelle einfügen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M9 4v16M15 4v16"/></svg></button>
+      <span class="tool-divider"></span>
+      <button class="tool-btn" data-action="undo" title="Rückgängig (Strg+Z)" aria-label="Rückgängig"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 14 4 9l5-5"/><path d="M4 9h9a7 7 0 0 1 0 14h-2"/></svg></button>
+      <button class="tool-btn" data-action="redo" title="Wiederholen (Strg+Y)" aria-label="Wiederholen"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m15 14 5-5-5-5"/><path d="M20 9h-9a7 7 0 0 0 0 14h2"/></svg></button>
+    </nav>
+  </div>
+
+  <main class="workspace-shell">
+    <div class="workspace-top">
+      <div class="view-tabs" role="group" aria-label="Ansicht auswählen">
+        <button class="view-tab" data-view="edit">Editor</button>
+        <button class="view-tab selected" data-view="split">Geteilt</button>
+        <button class="view-tab" data-view="preview">Vorschau</button>
+      </div>
+      <div class="workspace-hint">Änderungen werden automatisch in diesem Browser gespeichert.</div>
+      <button class="btn btn-icon" id="fullscreenBtn" title="Editor-Vollbild" aria-label="Editor-Vollbild">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v3m13-5h3a2 2 0 0 1 2 2v3M3 16v3a2 2 0 0 0 2 2h3m13-5v3a2 2 0 0 1-2 2h-3"/></svg>
+      </button>
+    </div>
+    <section class="workspace" id="workspace">
+      <section class="pane" id="editorPane">
+        <div class="pane-head"><div class="pane-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="m15 5 4 4M4 20l4-.8L19 8a2.8 2.8 0 0 0-4-4L4 15z"/></svg>Markdown-Editor</div><span class="pane-meta">.md</span></div>
+        <div class="editor-area">
+          <div class="line-numbers" id="lineNumbers" aria-hidden="true">1</div>
+          <textarea id="markdownInput" spellcheck="false" autocapitalize="off" autocomplete="off" autocorrect="off" aria-label="Markdown-Quelltext" placeholder="Schreibe dein Markdown hier …"></textarea>
+        </div>
+      </section>
+      <section class="pane" id="previewPane">
+        <div class="pane-head"><div class="pane-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12Z"/><circle cx="12" cy="12" r="3"/></svg>Live-Vorschau</div><span class="pane-meta" id="previewMeta">Live aktualisiert</span></div>
+        <div class="preview-scroll"><article class="preview" id="previewContent"><div class="empty-preview">Deine formatierte Vorschau erscheint hier.</div></article></div>
+      </section>
+    </section>
+    <footer class="statusbar">
+      <div class="stats">
+        <span class="status-item"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 5h16M4 10h16M4 15h10M4 20h7"/></svg><span id="wordCount">0 Wörter</span></span>
+        <span class="status-item"><span id="charCount">0 Zeichen</span></span>
+        <span class="status-item"><span id="lineCount">1 Zeile</span></span>
+      </div>
+      <div class="status-right shortcut-hints"><span class="status-item"><span class="shortcut">Ctrl</span> + <span class="shortcut">B</span> Fett</span><span class="status-item"><span class="shortcut">Ctrl</span> + <span class="shortcut">K</span> Link</span><span class="status-item">Markdown · UTF-8</span></div>
+    </footer>
+  </main>
+</div>
+
+<div class="modal-backdrop hidden" id="downloadModal" role="dialog" aria-modal="true" aria-labelledby="downloadTitle">
+  <form class="modal" id="downloadForm">
+    <div class="modal-head">
+      <div><div class="modal-title" id="downloadTitle">Datei herunterladen</div><div class="modal-subtitle">Wähle das Format, das zu deinem Dokument passt.</div></div>
+      <button class="close-modal" type="button" id="closeDownload" aria-label="Dialog schließen"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 6 12 12M18 6 6 18"/></svg></button>
+    </div>
+    <div class="modal-body">
+      <label class="field-label" for="downloadFilename">Dateiname</label>
+      <input class="filename-input" id="downloadFilename" value="Mein Markdown-Dokument" maxlength="120" autocomplete="off" />
+      <div class="field-label">Dateiformat auswählen</div>
+      <div class="format-options">
+        <label class="format-option"><input type="radio" name="format" value="md" checked /><span class="format-icon">.MD</span><span class="format-copy"><span class="format-name">Markdown-Datei (.md)</span><span class="format-description">Behält Markdown-Syntax und Formatierungen bei.</span></span></label>
+        <label class="format-option"><input type="radio" name="format" value="txt" /><span class="format-icon">.TXT</span><span class="format-copy"><span class="format-name">Textdatei (.txt)</span><span class="format-description">Exportiert den Inhalt als einfachen Text ohne Markdown-Syntax.</span></span></label>
+      </div>
+    </div>
+    <div class="modal-foot"><button class="btn" type="button" id="cancelDownload">Abbrechen</button><button class="btn btn-primary" type="submit"><svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m-5-5 5 5 5-5"/><path d="M5 17v3h14v-3"/></svg>Jetzt herunterladen</button></div>
+  </form>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<!-- Marked + DOMPurify ermöglichen eine umfangreiche Markdown-Darstellung und bereinigtes HTML in der Vorschau. -->
+<script src="https://cdn.jsdelivr.net/npm/marked@15.0.12/marked.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/dompurify@3.2.6/dist/purify.min.js"></script>
+<script>
+(() => {
+  'use strict';
+  const STORAGE_KEY = 'markdown-studio-v1';
+  const app = document.getElementById('app');
+  const input = document.getElementById('markdownInput');
+  const preview = document.getElementById('previewContent');
+  const titleInput = document.getElementById('docTitle');
+  const lineNumbers = document.getElementById('lineNumbers');
+  const workspace = document.getElementById('workspace');
+  const modal = document.getElementById('downloadModal');
+  const downloadFilename = document.getElementById('downloadFilename');
+  const toast = document.getElementById('toast');
+  let saveTimer = null, toastTimer = null, undoStack = [], redoStack = [], lastSnapshot = '', lastSavedAt = 0;
+  const sample = `# Willkommen bei Markdown Studio
+
+Ein moderner Editor für **Markdown** – mit Live-Vorschau und praktischem Export.
+
+## Schnell loslegen
+
+- Schreibe links deinen Markdown-Text.
+- Sieh rechts direkt das formatierte Ergebnis.
+- Lade dein Dokument als **.md** oder **.txt** herunter.
+
+### Formatierungen
+
+Du kannst Text **fett**, *kursiv* oder ~~durchgestrichen~~ darstellen. Auch [Links](https://www.example.com), Inline-Code wie \`const x = 42;\` und Zitate sind möglich.
+
+> Tipp: Nutze die Werkzeugleiste oder Tastenkürzel für häufige Formatierungen.
+
+### Aufgabenliste
+
+- [x] Dokument schreiben
+- [x] Vorschau prüfen
+- [ ] Datei exportieren
+
+### Codebeispiel
+
+\`\`\`javascript
+function begrüßung(name) {
+  return \`Hallo, \${name}!\`;
+}
+\`\`\`
+
+### Kleine Tabelle
+
+| Funktion | Verfügbar |
+| --- | --- |
+| Live-Vorschau | Ja |
+| Autosave im Browser | Ja |
+| Export als MD / TXT | Ja |
+
+---
+
+Viel Spaß beim Schreiben!`;
+  input.value = sample;
+
+  function escapeHtml(value) {
+    return String(value).replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+  }
+  function safeUrl(url) {
+    const raw = String(url || '').trim().replace(/&amp;/g, '&');
+    if (/^(https?:|mailto:|tel:|#|\/|\.\/|\.\.\/)/i.test(raw)) return raw;
+    if (/^[a-z0-9.-]+\.[a-z]{2,}([/:?#]|$)/i.test(raw)) return 'https://' + raw;
+    return '#';
+  }
+  function fallbackInline(text) {
+    let s = escapeHtml(text);
+    const stash = [];
+    const keep = html => { const key = `\u0000${stash.length}\u0000`; stash.push(html); return key; };
+    s = s.replace(/!\[([^\]]*)\]\(([^\s)]+)(?:\s+"([^"]*)")?\)/g, (_, alt, url, title) => keep(`<img src="${escapeHtml(safeUrl(url))}" alt="${alt}"${title ? ` title="${escapeHtml(title)}"` : ''}>`));
+    s = s.replace(/\[([^\]]+)\]\(([^\s)]+)(?:\s+"([^"]*)")?\)/g, (_, label, url, title) => keep(`<a href="${escapeHtml(safeUrl(url))}"${title ? ` title="${escapeHtml(title)}"` : ''} target="_blank" rel="noopener noreferrer">${label}</a>`));
+    s = s.replace(/`([^`]+)`/g, (_, code) => keep(`<code>${code}</code>`));
+    s = s.replace(/\*\*([\s\S]+?)\*\*|__([\s\S]+?)__/g, '<strong>$1$2</strong>');
+    s = s.replace(/~~([\s\S]+?)~~/g, '<del>$1</del>');
+    s = s.replace(/(^|[^*])\*([^*\n]+)\*(?!\*)/g, '$1<em>$2</em>');
+    s = s.replace(/(^|[^_])_([^_\n]+)_(?!_)/g, '$1<em>$2</em>');
+    s = s.replace(/\u0000(\d+)\u0000/g, (_, idx) => stash[Number(idx)] || '');
+    return s;
+  }
+  function fallbackMarkdown(md) {
+    const lines = md.replace(/\r\n?/g, '\n').split('\n');
+    const out = []; let i = 0;
+    const isTableDivider = line => /^\s*\|?\s*:?-{3,}:?\s*(\|\s*:?-{3,}:?\s*)+\|?\s*$/.test(line);
+    const isList = line => /^\s*(?:[-+*]\s+|\d+[.)]\s+)/.test(line);
+    const isBlockStart = line => /^\s*(```|#{1,6}\s|>|(?:[-*_]\s*){3,}$)/.test(line) || isList(line);
+    while (i < lines.length) {
+      const line = lines[i];
+      if (!line.trim()) { i++; continue; }
+      if (/^\s*```/.test(line)) {
+        const lang = line.trim().slice(3).trim(); i++; const code = [];
+        while (i < lines.length && !/^\s*```/.test(lines[i])) code.push(lines[i++]);
+        if (i < lines.length) i++;
+        out.push(`<pre><code${lang ? ` class="language-${escapeHtml(lang)}"` : ''}>${escapeHtml(code.join('\n'))}</code></pre>`); continue;
+      }
+      const heading = line.match(/^\s*(#{1,6})\s+(.+?)\s*#*\s*$/);
+      if (heading) { const n = heading[1].length; out.push(`<h${n}>${fallbackInline(heading[2])}</h${n}>`); i++; continue; }
+      if (/^\s*(?:[-*_]\s*){3,}$/.test(line)) { out.push('<hr>'); i++; continue; }
+      if (i + 1 < lines.length && line.includes('|') && isTableDivider(lines[i+1])) {
+        const cells = s => s.trim().replace(/^\|/, '').replace(/\|$/, '').split('|').map(x => x.trim());
+        const head = cells(line); i += 2; let rows = '';
+        while (i < lines.length && lines[i].includes('|') && lines[i].trim()) { const c = cells(lines[i]); rows += '<tr>' + head.map((_, k) => `<td>${fallbackInline(c[k] || '')}</td>`).join('') + '</tr>'; i++; }
+        out.push('<table><thead><tr>' + head.map(c => `<th>${fallbackInline(c)}</th>`).join('') + '</tr></thead><tbody>' + rows + '</tbody></table>'); continue;
+      }
+      if (/^\s*>/.test(line)) {
+        const quoted = []; while (i < lines.length && /^\s*>/.test(lines[i])) quoted.push(lines[i++].replace(/^\s*>\s?/, ''));
+        out.push('<blockquote>' + fallbackMarkdown(quoted.join('\n')) + '</blockquote>'); continue;
+      }
+      if (isList(line)) {
+        const ordered = /^\s*\d+[.)]\s+/.test(line), tag = ordered ? 'ol' : 'ul'; let items = '';
+        while (i < lines.length && isList(lines[i]) && (/^\s*\d+[.)]\s+/.test(lines[i])) === ordered) {
+          let content = lines[i++].replace(/^\s*(?:[-+*]|\d+[.)])\s+/, '');
+          const task = content.match(/^\[([ xX])\]\s+(.*)$/);
+          if (task) content = `<input type="checkbox" disabled ${task[1].toLowerCase() === 'x' ? 'checked' : ''}>${fallbackInline(task[2])}`;
+          else content = fallbackInline(content);
+          items += `<li>${content}</li>`;
+        }
+        out.push(`<${tag}>${items}</${tag}>`); continue;
+      }
+      const para = [line]; i++;
+      while (i < lines.length && lines[i].trim() && !isBlockStart(lines[i]) && !(i + 1 < lines.length && lines[i].includes('|') && isTableDivider(lines[i+1]))) para.push(lines[i++]);
+      out.push(`<p>${para.map(fallbackInline).join('<br>')}</p>`);
+    }
+    return out.join('\n');
+  }
+  function renderMarkdown(md) {
+    if (!md.trim()) { preview.innerHTML = '<div class="empty-preview">Deine formatierte Vorschau erscheint hier.</div>'; return; }
+    try {
+      if (window.marked && typeof window.marked.parse === 'function') {
+        const rendered = window.marked.parse(md, { gfm: true, breaks: false });
+        preview.innerHTML = window.DOMPurify ? window.DOMPurify.sanitize(rendered, { USE_PROFILES: { html: true } }) : fallbackMarkdown(md);
+      } else preview.innerHTML = fallbackMarkdown(md);
+    } catch (err) {
+      preview.innerHTML = fallbackMarkdown(md);
+    }
+  }
+  function updateStats() {
+    const text = input.value;
+    const words = text.trim() ? text.trim().split(/\s+/u).length : 0;
+    const lines = text.split('\n').length;
+    document.getElementById('wordCount').textContent = `${words} ${words === 1 ? 'Wort' : 'Wörter'}`;
+    document.getElementById('charCount').textContent = `${text.length} Zeichen`;
+    document.getElementById('lineCount').textContent = `${lines} ${lines === 1 ? 'Zeile' : 'Zeilen'}`;
+    lineNumbers.textContent = Array.from({length: lines}, (_, n) => n + 1).join('\n');
+  }
+  function renderAll() { renderMarkdown(input.value); updateStats(); }
+  function snapshot() { return { title: titleInput.value, content: input.value, theme: app.dataset.theme || 'light' }; }
+  function saveNow(showState = true) {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(snapshot()));
+      lastSavedAt = Date.now();
+      if (showState) { document.getElementById('saveText').textContent = 'Lokal gespeichert'; }
+    } catch (e) {
+      document.getElementById('saveText').textContent = 'Speichern nicht möglich';
+    }
+  }
+  function scheduleSave() {
+    document.getElementById('saveText').textContent = 'Speichert …';
+    clearTimeout(saveTimer); saveTimer = setTimeout(() => saveNow(), 350);
+  }
+  function showToast(message) {
+    toast.textContent = message; toast.classList.add('show');
+    clearTimeout(toastTimer); toastTimer = setTimeout(() => toast.classList.remove('show'), 2400);
+  }
+  function recordUndo() {
+    const current = input.value;
+    if (current === lastSnapshot) return;
+    undoStack.push(lastSnapshot);
+    if (undoStack.length > 100) undoStack.shift();
+    redoStack = []; lastSnapshot = current;
+  }
+  function insertAtCursor(before, after = '', placeholder = '') {
+    input.focus();
+    const start = input.selectionStart, end = input.selectionEnd, value = input.value;
+    const selected = value.slice(start, end) || placeholder;
+    recordUndo();
+    input.setRangeText(before + selected + after, start, end, 'select');
+    if (start === end && placeholder) input.setSelectionRange(start + before.length, start + before.length + placeholder.length);
+    else input.setSelectionRange(start + before.length, start + before.length + selected.length);
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+  }
+  function prefixLines(prefix, continuation = prefix) {
+    input.focus(); const start = input.selectionStart, end = input.selectionEnd, value = input.value;
+    const lineStart = value.lastIndexOf('\n', start - 1) + 1;
+    const nextNewline = value.indexOf('\n', end);
+    const lineEnd = nextNewline === -1 ? value.length : nextNewline;
+    const selectedEnd = end > lineStart && value[end - 1] === '\n' ? end - 1 : end;
+    const block = value.slice(lineStart, selectedEnd || lineEnd);
+    const lines = block.split('\n');
+    const newBlock = lines.map((line, idx) => {
+      if (prefix === '> ') return line.startsWith('> ') ? line.slice(2) : '> ' + line;
+      if (prefix === '- [ ] ') return `${prefix}${line.replace(/^\s*(?:[-+*]\s+|\d+[.)]\s+)?/, '')}`;
+      if (prefix === '1. ') return line.replace(/^\s*(?:[-+*]|\d+[.)])\s+/, '') ? `${idx + 1}. ${line.replace(/^\s*(?:[-+*]|\d+[.)])\s+/, '')}` : `${idx + 1}. `;
+      if (prefix === '- ') return line.match(/^\s*[-+*]\s+/) ? line.replace(/^\s*[-+*]\s+/, '') : prefix + line;
+      return prefix + line;
+    }).join('\n');
+    recordUndo(); input.setRangeText(newBlock, lineStart, selectedEnd || lineEnd, 'select');
+    input.setSelectionRange(lineStart, lineStart + newBlock.length); input.dispatchEvent(new Event('input', { bubbles: true }));
+  }
+  function applyAction(action) {
+    switch (action) {
+      case 'bold': insertAtCursor('**', '**', 'fetter Text'); break;
+      case 'italic': insertAtCursor('*', '*', 'kursiver Text'); break;
+      case 'strike': insertAtCursor('~~', '~~', 'durchgestrichener Text'); break;
+      case 'inlineCode': insertAtCursor('`', '`', 'code'); break;
+      case 'codeBlock': insertAtCursor('\n```\n', '\n```\n', 'Code hier'); break;
+      case 'quote': prefixLines('> '); break;
+      case 'ul': prefixLines('- '); break;
+      case 'ol': prefixLines('1. '); break;
+      case 'task': prefixLines('- [ ] '); break;
+      case 'hr': insertAtCursor('\n\n---\n\n', '', ''); break;
+      case 'link': {
+        const selected = input.value.slice(input.selectionStart, input.selectionEnd);
+        const label = selected || 'Linktext';
+        const url = prompt('Welche URL soll der Link öffnen?', 'https://');
+        if (url !== null) insertAtCursor('[', `](${url.trim() || 'https://'})`, label);
+        break;
+      }
+      case 'image': {
+        const alt = prompt('Bildbeschreibung (Alt-Text):', 'Bildbeschreibung');
+        if (alt === null) break;
+        const url = prompt('URL des Bildes:', 'https://');
+        if (url !== null) insertAtCursor(`![${alt}](`, ')', url.trim() || 'https://');
+        break;
+      }
+      case 'table': insertAtCursor('\n| Spalte 1 | Spalte 2 | Spalte 3 |\n| --- | --- | --- |\n| Inhalt | Inhalt | Inhalt |\n', '', ''); break;
+      case 'undo': {
+        if (!undoStack.length) { showToast('Nichts zum Rückgängigmachen.'); break; }
+        redoStack.push(input.value); input.value = undoStack.pop(); lastSnapshot = input.value; input.dispatchEvent(new Event('input', { bubbles: true })); break;
+      }
+      case 'redo': {
+        if (!redoStack.length) { showToast('Nichts zum Wiederholen.'); break; }
+        undoStack.push(input.value); input.value = redoStack.pop(); lastSnapshot = input.value; input.dispatchEvent(new Event('input', { bubbles: true })); break;
+      }
+    }
+  }
+  document.querySelectorAll('[data-action]').forEach(btn => btn.addEventListener('click', () => applyAction(btn.dataset.action)));
+  document.getElementById('headingSelect').addEventListener('change', e => {
+    if (e.target.value) { insertAtCursor(e.target.value, '', 'Überschrift'); e.target.value = ''; }
+  });
+  input.addEventListener('input', () => { recordUndo(); renderAll(); scheduleSave(); });
+  titleInput.addEventListener('input', scheduleSave);
+  input.addEventListener('scroll', () => { lineNumbers.scrollTop = input.scrollTop; });
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Tab') { e.preventDefault(); insertAtCursor('  ', '', ''); }
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'b') { e.preventDefault(); applyAction('bold'); }
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'i') { e.preventDefault(); applyAction('italic'); }
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); applyAction('link'); }
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') { e.preventDefault(); saveNow(); showToast('Dokument lokal gespeichert.'); }
+    if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === 'e') { e.preventDefault(); openDownloadModal(); }
+  });
+  function setView(view) {
+    workspace.classList.remove('mode-edit', 'mode-preview', 'mobile-preview');
+    if (view === 'edit') workspace.classList.add('mode-edit');
+    if (view === 'preview') workspace.classList.add('mode-preview');
+    if (window.innerWidth <= 1000 && view === 'preview') workspace.classList.add('mobile-preview');
+    document.querySelectorAll('[data-view]').forEach(btn => btn.classList.toggle('selected', btn.dataset.view === view));
+  }
+  document.querySelectorAll('[data-view]').forEach(btn => btn.addEventListener('click', () => setView(btn.dataset.view)));
+  document.getElementById('fullscreenBtn').addEventListener('click', () => {
+    const target = document.querySelector('.workspace-shell');
+    if (!document.fullscreenElement && target.requestFullscreen) target.requestFullscreen().catch(() => showToast('Vollbild ist in diesem Browser nicht verfügbar.'));
+    else if (document.exitFullscreen) document.exitFullscreen();
+  });
+  document.getElementById('themeToggle').addEventListener('click', () => {
+    app.dataset.theme = app.dataset.theme === 'dark' ? 'light' : 'dark';
+    document.getElementById('themeIcon').innerHTML = app.dataset.theme === 'dark'
+      ? '<path d="M20.5 14.5A8.5 8.5 0 0 1 9.5 3.5 8.5 8.5 0 1 0 20.5 14.5Z"/>'
+      : '<circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42M2 12h2m16 0h2M4.93 19.07l1.42-1.42m11.3-11.3 1.42-1.42"/>';
+    scheduleSave();
+  });
+  document.getElementById('importBtn').addEventListener('click', () => document.getElementById('fileInput').click());
+  document.getElementById('fileInput').addEventListener('change', async e => {
+    const file = e.target.files && e.target.files[0]; if (!file) return;
+    try {
+      const text = await file.text();
+      recordUndo(); input.value = text; titleInput.value = file.name.replace(/\.(md|markdown|txt)$/i, '') || 'Importiertes Dokument';
+      lastSnapshot = input.value; renderAll(); saveNow(); showToast(`${file.name} wurde importiert.`);
+    } catch (err) { showToast('Die Datei konnte nicht gelesen werden.'); }
+    e.target.value = '';
+  });
+  function openDownloadModal() {
+    const baseName = (titleInput.value || 'Markdown-Dokument').replace(/\.(md|markdown|txt)$/i, '');
+    downloadFilename.value = baseName;
+    modal.classList.remove('hidden');
+    setTimeout(() => downloadFilename.focus(), 10);
+  }
+  function closeDownloadModal() { modal.classList.add('hidden'); }
+  document.getElementById('openDownload').addEventListener('click', openDownloadModal);
+  document.getElementById('closeDownload').addEventListener('click', closeDownloadModal);
+  document.getElementById('cancelDownload').addEventListener('click', closeDownloadModal);
+  modal.addEventListener('click', e => { if (e.target === modal) closeDownloadModal(); });
+  document.addEventListener('keydown', e => { if (e.key === 'Escape' && !modal.classList.contains('hidden')) closeDownloadModal(); });
+  function plainTextFromMarkdown(md) {
+    let text = md.replace(/\r\n?/g, '\n');
+    text = text.replace(/^\s*```[^\n]*\n([\s\S]*?)^\s*```\s*$/gm, '$1');
+    text = text.replace(/!\[([^\]]*)\]\(([^)]+)\)/g, '$1');
+    text = text.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '$1');
+    text = text.replace(/^\s{0,3}#{1,6}\s+/gm, '');
+    text = text.replace(/^\s*>\s?/gm, '');
+    text = text.replace(/^\s*(?:[-+*]|\d+[.)])\s+/gm, '• ');
+    text = text.replace(/^\s*[-*_]{3,}\s*$/gm, '');
+    text = text.replace(/\|/g, ' ');
+    text = text.replace(/\*\*([\s\S]+?)\*\*|__([\s\S]+?)__/g, '$1$2');
+    text = text.replace(/\*([^*\n]+)\*|_([^_\n]+)_/g, '$1$2');
+    text = text.replace(/~~([\s\S]+?)~~/g, '$1');
+    text = text.replace(/`([^`]+)`/g, '$1');
+    text = text.replace(/^\s*\[([ xX])\]\s+/gm, m => m.includes('x') || m.includes('X') ? '☑ ' : '☐ ');
+    return text.replace(/[ \t]+\n/g, '\n').replace(/\n{3,}/g, '\n\n').trim() + '\n';
+  }
+  document.getElementById('downloadForm').addEventListener('submit', e => {
+    e.preventDefault();
+    const format = new FormData(e.currentTarget).get('format') || 'md';
+    let name = (downloadFilename.value || 'Markdown-Dokument').trim().replace(/[\\/:*?"<>|]/g, '-').replace(/\.+$/g, '') || 'Markdown-Dokument';
+    name = name.replace(/\.(md|markdown|txt)$/i, '');
+    const content = format === 'txt' ? plainTextFromMarkdown(input.value) : input.value;
+    const blob = new Blob([content], { type: format === 'md' ? 'text/markdown;charset=utf-8' : 'text/plain;charset=utf-8' });
+    const url = URL.createObjectURL(blob); const a = document.createElement('a');
+    a.href = url; a.download = `${name}.${format}`; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    closeDownloadModal(); saveNow(); showToast(`Download gestartet: ${name}.${format}`);
+  });
+  function loadSaved() {
+    try {
+      const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
+      if (saved && typeof saved.content === 'string') {
+        input.value = saved.content;
+        titleInput.value = typeof saved.title === 'string' ? saved.title : 'Mein Markdown-Dokument';
+        if (saved.theme === 'dark' || saved.theme === 'light') app.dataset.theme = saved.theme;
+      }
+    } catch (e) { /* Bei beschädigtem LocalStorage wird das Beispiel verwendet. */ }
+    lastSnapshot = input.value; renderAll(); saveNow(false);
+  }
+  loadSaved();
+  window.addEventListener('beforeunload', () => { clearTimeout(saveTimer); saveNow(false); });
+})();
+</script>
+</body>
+</html>
